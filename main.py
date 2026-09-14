@@ -14,6 +14,8 @@ def main():
 
     print("Heya! Type quit to exit this chat.")
 
+    messages_history = []
+
     while True:
         # ask user for some input
         user_input = input("\nYou: ").strip()
@@ -21,9 +23,13 @@ def main():
         if user_input == "quit":
             break
         print("\nAssistant: ", end="")
-        # send user input to agent
+
+        # add new message to persistent history
+        messages_history.append(HumanMessage(content=user_input))
+
+        # stream updates
         for chunk in agent_executor.stream(
-            {"messages": [HumanMessage(content=user_input)]}
+            {"messages": messages_history}
         ): # take response from agent stream, print to console
             if "agent" in chunk and "messages" in chunk["agent"]:
                 for message in chunk["agent"]["messages"]:
