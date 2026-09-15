@@ -40,22 +40,23 @@ async def github_profile(owner: str , name: str) -> str:
 
     url = "https://api.github.com/graphql"
     token = os.environ['GITHUB_TOKEN']
-    
+    if not token:
+        return("Couldn't reach GitHub: GITHUB_TOKEN is not set in your .env or environment!")
+
     headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}"
     }
+
     # GraphQL expects a JSON payload with "query"
     payload = { 
         "query": query,
         "variables": {"owner": owner, "name":name}
     }
 
-
-
     # send GraphQL query as POST request
     async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.post(url, json=payload, headers=headers, timeout=10.0)
+        response = await client.post(url, json=payload, headers=headers)
         response.raise_for_status()
     
     repo = response.json()["data"]["repository"]
