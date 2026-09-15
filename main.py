@@ -1,6 +1,8 @@
 import asyncio
 import httpx
+import os
 
+from datetime import datetime
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
@@ -12,10 +14,13 @@ load_dotenv()
 
 @tool
 async def github_profile(owner: str , name: str) -> str: 
-    """Pull recent commits/stars for a given repo name provided by the user. Use this when the user asks about their own coding progress, their latest Github work, or if they provide a github repo and Github username at all."""
+    # TODO set github name in env instead
+    # TODO pull list of recent repos if none is provided and let user choose
+    """Pull recent commits/stars for a given repo name provided by the user. Use this when the user asks about their own coding progress, or about their latest Github stars and or commits."""
    
     print('going into github tool!')
-    # build query using user input
+
+    # build GraphQL query using user input
     query = """
     query($owner: String!, $name: String!) {
         repository(owner: $owner, name: $name) {
@@ -24,7 +29,7 @@ async def github_profile(owner: str , name: str) -> str:
                 target {
                     ... on Commit {
                         history(first: 5) {
-                            nodes { message commitedDate }
+                            nodes { message committedDate }
                         }
                     }
                 }
@@ -34,9 +39,17 @@ async def github_profile(owner: str , name: str) -> str:
     """
 
     url = "https://api.github.com/graphql"
-    headers = {"Content-Type": "application/json"}
+    token = os.environ['GITHUB_TOKEN']
+    
+    headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}"
+    }
     # GraphQL expects a JSON payload with "query"
-    payload = { "query": query }
+    payload = { 
+        "query": query,
+        "variables": {"owner": owner, "name":name}
+    }
 
 
 
@@ -44,12 +57,25 @@ async def github_profile(owner: str , name: str) -> str:
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.post(url, json=payload, headers=headers, timeout=10.0)
         response.raise_for_status()
-    print("response: ", response)
+    
+    repo = response.json()["data"]["repository"]
+    repoStars = repo["stargazerCount"]
+    # TODO handle below safely!
+    repoCommits = repo["defaultBranchRef"]["target"]["history"]["nodes"]
 
+    lines = []
+
+    for commit in repoCommits:
+        # Parse the returned ISO string (replace 'Z' with '+00:00' for standard parsing)
+        date = datetime.fromisoformat(commit["committedDate"].replace("Z", "+00:00"))
+        lines.append(f"{date:%A, %b %d %Y} - {commit["message"]}")
+
+    return f"\n This repo currently has {repoStars} stars.\n Here are the latest commits pushed:\n {lines}"
 
 @tool
 async def hacker_news_stories(limit: int=5) -> str:
     """Fetch the current top stories from Hacker News. Use this when the user asks about tech news, or what's trending on Hacker News."""
+    print('going into hacker news tool!')
     url = "https://hn.algolia.com/api/v1/search"
 
     # httpx URL encodes this into ?tags=front_page&hitsPerPage=N
