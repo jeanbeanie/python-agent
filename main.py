@@ -11,6 +11,43 @@ from langgraph.prebuilt import create_react_agent
 load_dotenv()
 
 @tool
+async def github_profile(owner: str , name: str) -> str: 
+    """Pull recent commits/stars for a given repo name provided by the user. Use this when the user asks about their own coding progress, their latest Github work, or if they provide a github repo and Github username at all."""
+   
+    print('going into github tool!')
+    # build query using user input
+    query = """
+    query($owner: String!, $name: String!) {
+        repository(owner: $owner, name: $name) {
+            stargazerCount
+            defaultBranchRef {
+                target {
+                    ... on Commit {
+                        history(first: 5) {
+                            nodes { message commitedDate }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
+
+    url = "https://api.github.com/graphql"
+    headers = {"Content-Type": "application/json"}
+    # GraphQL expects a JSON payload with "query"
+    payload = { "query": query }
+
+
+
+    # send GraphQL query as POST request
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(url, json=payload, headers=headers, timeout=10.0)
+        response.raise_for_status()
+    print("response: ", response)
+
+
+@tool
 async def hacker_news_stories(limit: int=5) -> str:
     """Fetch the current top stories from Hacker News. Use this when the user asks about tech news, or what's trending on Hacker News."""
     url = "https://hn.algolia.com/api/v1/search"
@@ -40,7 +77,7 @@ async def hacker_news_stories(limit: int=5) -> str:
 async def main():
     model = ChatOpenAI(temperature=0)
 
-    tools= [hacker_news_stories]
+    tools= [hacker_news_stories, github_profile]
     agent_executor = create_react_agent(model, tools)
 
     print("Heya! Type quit to exit this chat.")
