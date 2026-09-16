@@ -58,18 +58,34 @@ async def github_profile(owner: str , name: str) -> str:
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.post(url, json=payload, headers=headers)
         response.raise_for_status()
-    
-    repo = response.json()["data"]["repository"]
-    repoStars = repo["stargazerCount"]
-    # TODO handle below safely!
-    repoCommits = repo["defaultBranchRef"]["target"]["history"]["nodes"]
+   
+    result = response.json()
+
+    # errors array is returned for missing repos/ bad queries
+    if "errors" in result;
+        return f"Github API error: {result['error'][0]['message']}"
+
+    # handle missing/mispelled repo
+    repo = result["data"]["repository"]
+    if repo is None:
+        return f"No repo found for {owner}/{name}. Check spelling and try again!"
+
+    repo_stars = repo["stargazerCount"]
+
+    # defaultBranchRef is none for repos with no commits
+    branch = repo.get("defaultBranchRef")
+    if branch is None:
+        return f"\n This repo currently has {repo_stars} stars. It doesn't have any commits yet... get to work!"
+
+    # finally safe to grab the repo commits
+    repo_commits = branch["target"]["history"]["nodes"]
 
     lines = []
 
-    for commit in repoCommits:
+    for commit in repo_commits:
         # Parse the returned ISO string (replace 'Z' with '+00:00' for standard parsing)
         date = datetime.fromisoformat(commit["committedDate"].replace("Z", "+00:00"))
-        lines.append(f"{date:%A, %b %d %Y} - {commit["message"]}")
+        lines.append(f"{date:%A, %b %d %Y} - {commit['message']}")
 
     return f"\n This repo currently has {repoStars} stars.\n Here are the latest commits pushed:\n {lines}"
 
