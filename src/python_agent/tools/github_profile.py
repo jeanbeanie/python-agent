@@ -33,7 +33,7 @@ async def github_profile(owner: str , name: str) -> str:
     """
 
     url = "https://api.github.com/graphql"
-    token = os.environ['GITHUB_TOKEN']
+    token = os.environ.get('GITHUB_TOKEN')
     if not token:
         return("Couldn't reach GitHub: GITHUB_TOKEN is not set in your .env or environment!")
 
@@ -57,7 +57,7 @@ async def github_profile(owner: str , name: str) -> str:
 
     # errors array is returned for missing repos/ bad queries
     if "errors" in result:
-        return f"Github API error: {result['error'][0]['message']}"
+        return f"Github API error: {result['errors'][0]['message']}"
 
     # handle missing/mispelled repo
     repo = result["data"]["repository"]
