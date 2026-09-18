@@ -14,6 +14,8 @@ from python_agent.tools.hacker_news import hacker_news_stories
 
 load_dotenv()
 
+EXIT_WORDS = ("quit", "exit", "q", "goodbye", "bye")
+
 async def main():
     model = ChatOpenAI(temperature=0)
 
@@ -30,8 +32,12 @@ async def main():
         # ask user for some input
         user_input = (await asyncio.to_thread(input, "\nYou: ")).strip()
 
-        if user_input == "quit":
+        if user_input.lower() in EXIT_WORDS:
             break
+        # if user hits enter with nothing typed, ask again
+        if not user_input:
+            continue
+
         print("\nAssistant: ", end="")
 
 
