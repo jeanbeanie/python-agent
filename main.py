@@ -28,8 +28,7 @@ async def main():
 
     while True:
         # ask user for some input
-        # NOTE: not async for now
-        user_input = input("\nYou: ").strip()
+        user_input = (await asyncio.to_thread(input, "\nYou: ")).strip()
 
         if user_input == "quit":
             break
