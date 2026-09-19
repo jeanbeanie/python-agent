@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 #from langchain.tools import tool
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
+from aioconsole import ainput
 
 from python_agent.tools.github_profile import github_profile
 from python_agent.tools.hacker_news import hacker_news_stories
@@ -14,7 +15,7 @@ from python_agent.tools.hacker_news import hacker_news_stories
 
 load_dotenv()
 
-EXIT_WORDS = ("quit", "exit", "q", "goodbye", "bye")
+EXIT_WORDS = ("quit", "exit", "q", "goodbye", "bye", "^C")
 
 async def main():
     model = ChatOpenAI(temperature=0)
@@ -30,7 +31,8 @@ async def main():
 
     while True:
         # ask user for some input
-        user_input = (await asyncio.to_thread(input, "\nYou: ")).strip()
+        user_input = (await ainput("\nYou: ")).strip()
+
 
         if user_input.lower() in EXIT_WORDS:
             break
@@ -60,5 +62,8 @@ async def main():
 if __name__ == "__main__":
     # asyncio.run() first creates the event loop, runs main() to completion,
     # then closes it, allows calling async funcs
-    asyncio.run(main())
-
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        # have Ctrl+C end the program without an ugly crash
+        print("\n\nAssistant: Oh aight then, peace out!")
